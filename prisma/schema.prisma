@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Portfolio {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  premises  Premise[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("portfolios")
+}
+
+model Premise {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  name            String           @unique
+  portfolioId     String?
+  portfolio       Portfolio?       @relation(fields: [portfolioId], references: [id], onDelete: SetNull)
+
+  voltageType     String?
+  country         String?          @default("Singapore")
+  countryCode     String?          @default("SG")
+  region          String?
+  area            String?
+  masterGroup     String?
+  subGroup        String?
+
+  address         String?
+  phone           String?
+  operationHours  String?
+  greenMarkRating String?
+  latitude        Float?
+  longitude       Float?
+
+  readings        PremiseReading[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([region])
+  @@index([portfolioId])
+  @@map("premises")
+}
+
+model PremiseReading {
+  id        BigInt   @id @default(autoincrement())
+  premiseId String
+  premise   Premise  @relation(fields: [premiseId], references: [id], onDelete: Cascade)
+
+  timestamp DateTime @db.Timestamptz(3)
+  kwh       Decimal  @db.Decimal(12, 4)
+  kvarh     Decimal? @db.Decimal(12, 4)
+  isPeak    Boolean
+
+  @@unique([premiseId, timestamp])
+  @@index([premiseId, timestamp])
+  @@index([premiseId, isPeak, timestamp])
+  @@map("premise_readings")
+}

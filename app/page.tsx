@@ -18,7 +18,7 @@ export default async function Home() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg tracking-tight">ARGON</span>
+                <span className="font-extrabold text-lg tracking-tight">ENERGON</span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   Energy OS
                 </span>

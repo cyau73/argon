@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Argon | Premise Energy Intelligence & Consumption Drilldown",
+  title: "Energon OS | Premise Energy Intelligence & Consumption Drilldown",
   description: "Interactive yearly, monthly, daily and half-hourly energy consumption drilldown for commercial premises.",
 };
 

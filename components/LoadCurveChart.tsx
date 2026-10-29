@@ -3,7 +3,7 @@
 import React, { useState, useId } from "react";
 import { ChartDatum } from "./ConsumptionChart";
 import { TariffStructure } from "@/lib/tariffs";
-import { Zap, DollarSign, Activity } from "lucide-react";
+import { Zap, DollarSign, Activity, Info, ChevronDown } from "lucide-react";
 
 interface LoadCurveChartProps {
   data: ChartDatum[];
@@ -51,6 +51,7 @@ export function LoadCurveChart({
   voltageType = "HT",
 }: LoadCurveChartProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [showInfoDrawer, setShowInfoDrawer] = useState<boolean>(false);
   const gradId = useId();
 
   if (!data || data.length === 0) {
@@ -131,8 +132,6 @@ export function LoadCurveChart({
     peakPoint.val > 0;
 
   // Tariff shift interval boundary X coordinates
-  // Interval 14 = 07:00 (Start of Peak)
-  // Interval 46 = 23:00 (End of Peak / Start of Off-Peak)
   const peakStartX = padLeft + (14 / len) * plotWidth;
   const peakEndX = padLeft + (46 / len) * plotWidth;
 
@@ -150,7 +149,69 @@ export function LoadCurveChart({
   });
 
   return (
-    <div className="relative w-full select-none">
+    <div className="relative w-full select-none flex flex-col gap-2">
+      {/* Top Action Bar for Info Toggle */}
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Interactive Half-Hourly Profile (48 Intervals)</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowInfoDrawer(!showInfoDrawer)}
+          className="flex items-center gap-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
+        >
+          <Info className="h-3.5 w-3.5 text-emerald-500" />
+          <span>Tariff Schedule Info</span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${showInfoDrawer ? "rotate-180" : ""
+              }`}
+          />
+        </button>
+      </div>
+
+      {/* Collapsible Tariff Schedule & Legend Info Drawer */}
+      <div
+        className={`grid transition-all duration-300 ease-in-out overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/50 ${showInfoDrawer ? "grid-rows-[1fr] opacity-100 p-3 sm:p-4 mb-2" : "grid-rows-[0fr] opacity-0 p-0 mb-0 border-0"
+          }`}
+      >
+        <div className="overflow-hidden flex flex-col gap-3 text-xs text-zinc-600 dark:text-zinc-400">
+          <div className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
+            <span>{voltageType} Tariff Structure & Rate Bands</span>
+            <span className="rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-bold">
+              {tariff.name}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-start gap-2.5 rounded-lg bg-white dark:bg-zinc-800/60 p-2.5 border border-zinc-200/60 dark:border-zinc-700/50">
+              <span className="h-3 w-3 rounded-sm bg-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-zinc-900 dark:text-zinc-100">Peak Hours (07:00 – 23:00)</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Standard Rate: <span className="font-mono font-semibold text-amber-500">${tariff.peakRate.toFixed(4)} / kWh</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-lg bg-white dark:bg-zinc-800/60 p-2.5 border border-zinc-200/60 dark:border-zinc-700/50">
+              <span className="h-3 w-3 rounded-sm bg-sky-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-zinc-900 dark:text-zinc-100">Off-Peak Hours (23:00 – 07:00)</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Discounted Rate: <span className="font-mono font-semibold text-sky-500">${tariff.offPeakRate.toFixed(4)} / kWh</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-zinc-400 border-t border-zinc-200/60 dark:border-zinc-800 pt-2">
+            <span>Network Transmission Rate: <strong className="font-mono text-zinc-600 dark:text-zinc-300">${tariff.networkRate?.toFixed(3) ?? "0.043"} / kWh</strong></span>
+            <span>Red marker indicates peak demand interval across the 24-hour cycle.</span>
+          </div>
+        </div>
+      </div>
+
       {/* SVG Container */}
       <div className="relative w-full overflow-hidden">
         <svg
@@ -186,7 +247,6 @@ export function LoadCurveChart({
           </defs>
 
           {/* Background Tariff Zones */}
-          {/* 1. Morning Off-Peak (00:00 to 07:00) */}
           <rect
             x={padLeft}
             y={padTop}
@@ -194,7 +254,6 @@ export function LoadCurveChart({
             height={plotHeight}
             fill={`url(#offPeakGrad-${gradId})`}
           />
-          {/* 2. Daytime Peak (07:00 to 23:00) */}
           <rect
             x={peakStartX}
             y={padTop}
@@ -202,7 +261,6 @@ export function LoadCurveChart({
             height={plotHeight}
             fill={`url(#peakBandGrad-${gradId})`}
           />
-          {/* 3. Night Off-Peak (23:00 to 24:00) */}
           <rect
             x={peakEndX}
             y={padTop}
@@ -324,55 +382,61 @@ export function LoadCurveChart({
             opacity="0.4"
           />
 
-          {/* Peak Demand Callout Marker */}
-          {hasValidPeak && (
-            <g>
-              <circle
-                cx={peakPoint.x}
-                cy={peakPoint.y}
-                r="5"
-                fill="#ef4444"
-                stroke="#ffffff"
-                strokeWidth="2"
-                className="animate-pulse"
-              />
-              <line
-                x1={peakPoint.x}
-                y1={peakPoint.y}
-                x2={peakPoint.x}
-                y2={peakPoint.y - 18}
-                stroke="#ef4444"
-                strokeWidth="1.2"
-              />
-              <rect
-                x={Math.min(Math.max(peakPoint.x - 55, padLeft + 5), padLeft + plotWidth - 110)}
-                y={peakPoint.y - 34}
-                width="110"
-                height="16"
-                rx="3"
-                fill="#18181b"
-                stroke="#ef4444"
-                strokeWidth="0.8"
-              />
-              <text
-                x={Math.min(Math.max(peakPoint.x - 55, padLeft + 5), padLeft + plotWidth - 110) + 55}
-                y={peakPoint.y - 22}
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="700"
-                fill="#fca5a5"
-              >
-                {metricMode === "cost"
-                  ? `Max: $${peakPoint.val.toFixed(1)} @ ${peakPoint.datum.label}`
-                  : `Max: ${(peakPoint.val * 2).toFixed(0)} kW @ ${peakPoint.datum.label}`}
-              </text>
-            </g>
-          )}
+          {/* Peak Demand Callout Marker (Smart Flipping if near top) */}
+          {hasValidPeak && (() => {
+            const isNearTop = peakPoint.y < padTop + 55;
+            const boxY = isNearTop ? peakPoint.y + 12 : peakPoint.y - 34;
+            const lineY2 = isNearTop ? peakPoint.y + 12 : peakPoint.y - 18;
+            const textY = isNearTop ? peakPoint.y + 23 : peakPoint.y - 22;
+
+            return (
+              <g>
+                <circle
+                  cx={peakPoint.x}
+                  cy={peakPoint.y}
+                  r="5"
+                  fill="#ef4444"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  className="animate-pulse"
+                />
+                <line
+                  x1={peakPoint.x}
+                  y1={peakPoint.y}
+                  x2={peakPoint.x}
+                  y2={lineY2}
+                  stroke="#ef4444"
+                  strokeWidth="1.2"
+                />
+                <rect
+                  x={Math.min(Math.max(peakPoint.x - 55, padLeft + 5), padLeft + plotWidth - 110)}
+                  y={boxY}
+                  width="110"
+                  height="16"
+                  rx="3"
+                  fill="#18181b"
+                  stroke="#ef4444"
+                  strokeWidth="0.8"
+                />
+                <text
+                  x={Math.min(Math.max(peakPoint.x - 55, padLeft + 5), padLeft + plotWidth - 110) + 55}
+                  y={textY}
+                  textAnchor="middle"
+                  fontSize="9"
+                  fontWeight="700"
+                  fill="#fca5a5"
+                >
+                  {metricMode === "cost"
+                    ? `Max: $${peakPoint.val.toFixed(1)} @ ${peakPoint.datum.label}`
+                    : `Max: ${(peakPoint.val).toFixed(0)} kW @ ${peakPoint.datum.label}`}
+                </text>
+              </g>
+            );
+          })()}
 
           {/* Active Hover Snap Indicator */}
           {activePt && (
             <g>
-              {/* Vertical Crosshair Line */}
               <line
                 x1={activePt.x}
                 y1={padTop}
@@ -383,7 +447,6 @@ export function LoadCurveChart({
                 strokeDasharray="2 2"
                 opacity="0.8"
               />
-              {/* Highlight Point on Curve */}
               <circle
                 cx={activePt.x}
                 cy={activePt.y}
@@ -396,7 +459,7 @@ export function LoadCurveChart({
             </g>
           )}
 
-          {/* Interactive Mouse Hover Slices (48 transparent overlay strips) */}
+          {/* Interactive Mouse Hover Slices */}
           {points.map((pt, i) => {
             const stripWidth = plotWidth / len;
             const stripX = pt.x - stripWidth / 2;
@@ -415,7 +478,7 @@ export function LoadCurveChart({
             );
           })}
 
-          {/* X-Axis Time Labels (Every 3 hours: 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00, 23:30) */}
+          {/* X-Axis Time Labels */}
           {points
             .filter((_, idx) => idx % 6 === 0 || idx === points.length - 1)
             .map((pt, idx) => (
@@ -439,8 +502,8 @@ export function LoadCurveChart({
         <div
           className="pointer-events-none absolute z-30 flex flex-col rounded-xl bg-zinc-900/95 p-3.5 text-xs text-white shadow-2xl backdrop-blur-md border border-zinc-700/60 min-w-[210px] transition-all"
           style={{
-            left: `${Math.min(Math.max((activePt.x / svgWidth) * 100 - 10, 4), 74)}%`,
-            top: "10px",
+            left: `${Math.min(Math.max((activePt.x / svgWidth) * 100, 4), 74)}%`,
+            top: "55px",
           }}
         >
           <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
@@ -449,11 +512,10 @@ export function LoadCurveChart({
               {activePt.datum.label} (30 mins)
             </span>
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                activePt.datum.rawPayload?.isPeak
+              className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${activePt.datum.rawPayload?.isPeak
                   ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                   : "bg-sky-500/20 text-sky-400 border border-sky-500/30"
-              }`}
+                }`}
             >
               {activePt.datum.rawPayload?.isPeak ? "Peak Band" : "Off-Peak Band"}
             </span>
@@ -496,35 +558,6 @@ export function LoadCurveChart({
           </div>
         </div>
       )}
-
-      {/* Legend & Executive Load Profile Notes */}
-      <div className="mt-4 flex flex-wrap items-center justify-between border-t border-zinc-200/60 dark:border-zinc-800/80 pt-3 text-xs text-zinc-500">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-amber-400/20" />
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">
-              Peak Hours (07:00–23:00) • ${tariff.peakRate.toFixed(4)}/kWh
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-sky-500 ring-2 ring-sky-500/20" />
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">
-              Off-Peak Hours (23:00–07:00) • ${tariff.offPeakRate.toFixed(4)}/kWh
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-zinc-400">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
-            <span>Peak Demand Callout</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-[11px] text-zinc-400">
-          <span className="rounded bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 font-medium text-zinc-600 dark:text-zinc-300">
-            {voltageType} Tariff Schedule
-          </span>
-          <span>48 Continuous 30-min Intervals</span>
-        </div>
-      </div>
     </div>
   );
 }
